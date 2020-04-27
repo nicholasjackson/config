@@ -4,7 +4,7 @@ Config is a simple package to load config from a JSON formatted file and to watc
 ## Example
 The following example reads a config file located at `./config.json` into the struct `Config`.
 
-```
+```go
 type Config struct {
 	DBConnection   string `json:"db_connection"`
 	BindAddress    string `json:"bind_address"`
