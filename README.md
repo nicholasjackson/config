@@ -4,7 +4,7 @@ Config is a simple package to load config from a JSON formatted file and to watc
 ## Example
 The following example reads a config file located at `./config.json` into the struct `Config`.
 
-```
+```go
 type Config struct {
 	DBConnection   string `json:"db_connection"`
 	BindAddress    string `json:"bind_address"`
@@ -17,12 +17,17 @@ func main() {
 	// Create a new config watcher
 	c, err := config.New(
 		"./config.json",
-		conf,
 		logger.StandardLogger(&hclog.StandardLoggerOptions{}),
-		func() {
-			logger.Info("Config file updated", "config", conf)
+		func(c *Config) {
+      // callback when config file is updated
+      // returns a copy of the read config
+
+			logger.Info("Config file updated", "config", c)
 		},
 	)
+
+  // read the config
+  conf = c.Get()
 
   for{}
 }

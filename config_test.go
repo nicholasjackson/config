@@ -60,7 +60,7 @@ func TestLoadsConfigIntoStructOnStart(t *testing.T) {
 	require.NoError(t, err)
 	defer fw.Close()
 
-	tc := fw.Read()
+	tc := fw.Get()
 
 	assert.NoError(t, err)
 	assert.Equal(t, "Nic", tc.Name)
@@ -73,7 +73,7 @@ func TestLoadsConfigIntoStructOnChange(t *testing.T) {
 	require.NoError(t, err)
 	defer fw.Close()
 
-	tc := fw.Read()
+	tc := fw.Get()
 	require.Equal(t, "Nic", tc.Name)
 
 	// modify the config
@@ -82,7 +82,7 @@ func TestLoadsConfigIntoStructOnChange(t *testing.T) {
 
 	assert.Eventually(t,
 		func() bool {
-			tc = fw.Read()
+			tc = fw.Get()
 			return tc != nil && tc.Name == "Erik"
 		}, 5*time.Second, 1*time.Millisecond,
 	)
@@ -97,7 +97,7 @@ func TestCallsUpdateOnChange(t *testing.T) {
 	require.NoError(t, err)
 	defer fw.Close()
 
-	tc := fw.Read()
+	tc := fw.Get()
 	require.Equal(t, "Nic", tc.Name)
 
 	// modify the config

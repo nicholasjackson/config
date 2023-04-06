@@ -31,7 +31,7 @@ func main() {
 		},
 	)
 
-	conf = c.Read()
+	conf = c.Get()
 
 	if err != nil {
 		logger.Error("Unable to load config file", "error", err)

@@ -52,9 +52,9 @@ func New[T any](filePath string, checkInterval time.Duration, l *log.Logger, upd
 	return f, f.loadData()
 }
 
-// Read returns the config serialized from the JSON, the returned config is always a copy
+// Get returns the config serialized from the JSON, the returned config is always a copy
 // and is goroutine safe
-func (f *File[T]) Read() T {
+func (f *File[T]) Get() T {
 	f.configMutex.Lock()
 	defer f.configMutex.Unlock()
 
