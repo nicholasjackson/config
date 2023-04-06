@@ -3,10 +3,13 @@ package config
 import (
 	"log"
 	"os"
+	"path"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/xerrors"
 )
 
@@ -15,8 +18,10 @@ type testConfig struct {
 }
 
 func setupTests(t *testing.T) string {
-	os.Remove("/tmp/config.json")
-	f, err := os.OpenFile("/tmp/config.json", os.O_CREATE|os.O_RDWR, 0666)
+	dir := t.TempDir()
+	file := path.Join(dir, "config.json")
+
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +29,7 @@ func setupTests(t *testing.T) string {
 
 	f.WriteString(`{"Name": "Nic"}`)
 
-	return "/tmp/config.json"
+	return file
 }
 
 func modifyFile(f string, data string) error {
@@ -51,9 +56,11 @@ func modifyFile(f string, data string) error {
 func TestLoadsConfigIntoStructOnStart(t *testing.T) {
 	filePath := setupTests(t)
 
-	tc := &testConfig{}
-	fw, err := New(filePath, tc, &log.Logger{}, nil)
+	fw, err := New(filePath, 1*time.Millisecond, &log.Logger{}, func(*testConfig) {})
+	require.NoError(t, err)
 	defer fw.Close()
+
+	tc := fw.Read()
 
 	assert.NoError(t, err)
 	assert.Equal(t, "Nic", tc.Name)
@@ -62,36 +69,44 @@ func TestLoadsConfigIntoStructOnStart(t *testing.T) {
 func TestLoadsConfigIntoStructOnChange(t *testing.T) {
 	filePath := setupTests(t)
 
-	tc := &testConfig{}
-	fw, err := New(filePath, tc, nil)
+	fw, err := New[*testConfig](filePath, 1*time.Millisecond, &log.Logger{}, nil)
+	require.NoError(t, err)
 	defer fw.Close()
+
+	tc := fw.Read()
+	require.Equal(t, "Nic", tc.Name)
 
 	// modify the config
 	err = modifyFile(filePath, `{"Name": "Erik"}`)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Eventually(t,
 		func() bool {
+			tc = fw.Read()
 			return tc != nil && tc.Name == "Erik"
-		}, 10*time.Second, 10*time.Millisecond,
+		}, 5*time.Second, 1*time.Millisecond,
 	)
 }
 
 func TestCallsUpdateOnChange(t *testing.T) {
-	var updated = false
+	updated := &atomic.Bool{}
+	updated.Store(false)
 	filePath := setupTests(t)
 
-	tc := &testConfig{}
-	fw, err := New(filePath, tc, func() { updated = true })
+	fw, err := New(filePath, 1*time.Millisecond, &log.Logger{}, func(*testConfig) { updated.Store(true) })
+	require.NoError(t, err)
 	defer fw.Close()
+
+	tc := fw.Read()
+	require.Equal(t, "Nic", tc.Name)
 
 	// modify the config
 	err = modifyFile(filePath, `{"Name": "Erik"}`)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Eventually(t,
 		func() bool {
-			return updated
-		}, 10*time.Second, 10*time.Millisecond,
+			return updated.Load()
+		}, 5*time.Second, 1*time.Millisecond,
 	)
 }

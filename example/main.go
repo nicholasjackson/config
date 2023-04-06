@@ -20,17 +20,18 @@ var conf *Config
 func main() {
 	logger := hclog.Default()
 
-	conf = &Config{}
-
 	// Create a new config watcher
 	c, err := config.New(
 		"./config.json",
-		conf,
+		1*time.Second,
 		logger.StandardLogger(&hclog.StandardLoggerOptions{}),
-		func() {
+		func(c *Config) {
+			conf = c
 			logger.Info("Config file updated", "config", conf)
 		},
 	)
+
+	conf = c.Read()
 
 	if err != nil {
 		logger.Error("Unable to load config file", "error", err)
